@@ -3,10 +3,19 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>logstar</groupId>
-  <artifactId>logstar</artifactId>
+  <groupId>jlogstar</groupId>
+  <artifactId>jlogstar</artifactId>
   <version>0.1.0</version>
   <packaging>jar</packaging>
+  <name>jLogStar</name>
+  <description>Log analyzer for Java/WildFly logs: search, error grouping and anomaly detection</description>
+  <url>https://github.com/bwege2/jLogStar</url>
+  <licenses>
+    <license>
+      <name>GNU General Public License v3.0</name>
+      <url>https://www.gnu.org/licenses/gpl-3.0.html</url>
+    </license>
+  </licenses>
 
   <properties>
     <maven.compiler.release>21</maven.compiler.release>
@@ -32,11 +41,12 @@
         <executions><execution><phase>package</phase><goals><goal>shade</goal></goals>
           <configuration>
             <createDependencyReducedPom>false</createDependencyReducedPom>
-            <finalName>logstar</finalName>
+            <finalName>jlogstar</finalName>
             <transformers>
               <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer"/>
               <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                <mainClass>logstar.Main</mainClass>
+                <mainClass>jlogstar.Main</mainClass>
                 <manifestEntries><Multi-Release>true</Multi-Release><Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access></manifestEntries>
               </transformer>
             </transformers>

@@ -1,0 +1,36 @@
+name: Release
+
+# Pushing a tag like v0.1.0 builds dist/jlogstar-<version>.zip (incl. tests) and publishes a GitHub release
+# with the matching section of CHANGELOG.md as release notes.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Check tag matches pom version
+        run: |
+          POM=$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' pom.xml | head -1)
+          [ "v$POM" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME != pom version $POM"; exit 1; }
+      - name: Build release zip
+        run: tools/release.sh
+      - name: Extract release notes
+        run: |
+          V="${GITHUB_REF_NAME#v}"
+          awk -v v="$V" '/^## /{p = ($2 == v)} p' CHANGELOG.md | tail -n +2 > notes.md
+          test -s notes.md || echo "Release $GITHUB_REF_NAME" > notes.md
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/jlogstar-*.zip --title "jLogStar ${GITHUB_REF_NAME#v}" --notes-file notes.md

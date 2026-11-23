@@ -1,4 +1,4 @@
-// logStar UI – vanilla JS + ECharts. All views are driven by one filter state that is mirrored in the URL hash.
+// jLogStar UI – vanilla JS + ECharts. All views are driven by one filter state that is mirrored in the URL hash.
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -867,14 +867,14 @@ $('#themeBtn').addEventListener('click', () => {
     ? document.documentElement.dataset.theme === 'dark'
     : matchMedia('(prefers-color-scheme: dark)').matches;
   document.documentElement.dataset.theme = dark ? 'light' : 'dark';
-  localStorage.setItem('logstar-theme', document.documentElement.dataset.theme);
+  localStorage.setItem('jlogstar-theme', document.documentElement.dataset.theme);
   if (ov) { renderTimeline(); renderHeat(); renderTree(); renderTopGroups(); renderGroupTable(); }
 });
 window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
 window.addEventListener('hashchange', () => { readHash(); showTab(state.tab); refresh(); });
 
 (async function init() {
-  const theme = localStorage.getItem('logstar-theme');
+  const theme = localStorage.getItem('jlogstar-theme');
   if (theme) document.documentElement.dataset.theme = theme;
   info = await api('info', new URLSearchParams());
   setupFormats();

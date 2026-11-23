@@ -1,4 +1,4 @@
-# logStar – Konzept
+# jLogStar – Konzept
 
 Ziel: Gigabytes an Java-Logs (WildFly/JBoss, Log4j2, Logback, Log4j 1, JSON-Layouts) in Minuten einlesen,
 in Millisekunden durchsuchen und so darstellen, dass man **Fehler, Fehlerarten und untypische Situationen**
@@ -77,12 +77,12 @@ Leitfrage: *Wann ist was schiefgegangen, welche Art von Fehler war es, was ist n
 ## 6. Architektur
 
 ```
-logstar.jar (Java 25, ein Fat-JAR)
+jlogstar.jar (Java 25, ein Fat-JAR)
 ├─ ingest   Formaterkennung → paralleles Parsen → Maskierung/Signatur → Lucene IndexWriter
 ├─ analyze  Clustering der Templates, Zeitreihen, Detektoren, Regelbibliothek → analysis.json
 ├─ query    Lucene-Suche + DocValues-Aggregationen (segment-parallel)
 └─ web      eingebetteter HTTP-Server (JDK), JSON-API, Single-Page-UI (ECharts, ohne Build-Schritt)
 ```
 
-Aufruf: `logstar index <dateien|verzeichnisse…> --index <dir>` und `logstar serve --index <dir>`,
-oder in einem Schritt `logstar open <logs…>`.
+Aufruf: `jlogstar index <dateien|verzeichnisse…> --index <dir>` und `jlogstar serve --index <dir>`,
+oder in einem Schritt `jlogstar open <logs…>`.
