@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>logStar</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>✶</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <script src="vendor/echarts.min.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand">✶ logStar</div>
+  <form id="searchForm" class="search">
+    <input id="q" type="search" autocomplete="off" spellcheck="false"
+           placeholder='Suche: "Read timed out"  ·  ex:NullPointerException  ·  code:IJ000453  ·  logger:com.acme*  ·  level:>=WARN  ·  group:12'>
+    <select id="minLevel" title="Mindest-Level">
+      <option value="">alle Level</option>
+      <option value="3">≥ WARN</option>
+      <option value="4">≥ ERROR</option>
+    </select>
+    <button type="submit">Suchen</button>
+    <button type="button" id="helpBtn" class="ghost" title="Suchsyntax">?</button>
+  </form>
+  <div class="top-right">
+    <span id="datasetInfo" class="muted"></span>
+    <button id="themeBtn" class="ghost" title="Hell/Dunkel">◐</button>
+  </div>
+</header>
+<div id="filterBar" class="filterbar"></div>
+<nav class="tabs" id="tabs">
+  <button data-tab="overview" class="active">Übersicht</button>
+  <button data-tab="groups">Fehlergruppen</button>
+  <button data-tab="anomalies">Anomalien <span id="anomalyBadge" class="count"></span></button>
+  <button data-tab="events">Ereignisse</button>
+  <button data-tab="files">Dateien</button>
+  <span id="status" class="status muted"></span>
+</nav>
+<main>
+  <section id="tab-overview" class="tab active">
+    <div id="kpis" class="kpis"></div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Zeitverlauf</h2>
+        <span class="muted hint">Bereich mit gedrückter Maus markieren = Zeitfilter · Linien: Neustarts/Deployments · Flächen: Anomalien</span>
+      </div>
+      <div id="chartVolume" class="chart" style="height:190px"></div>
+      <div id="chartErrors" class="chart" style="height:170px"></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><h2>Fehlergruppen × Zeit</h2><span class="muted hint">Top-Gruppen (≥ WARN), Klick öffnet Gruppe</span></div>
+        <div id="chartHeat" class="chart" style="height:460px"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Fehlerarten</h2><span class="muted hint">Subsystem → Exception, Klick filtert</span></div>
+        <div id="chartTree" class="chart" style="height:460px"></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><h2>Auffälligkeiten</h2><a href="#" data-goto="anomalies">alle →</a></div>
+        <div id="topAnomalies"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Häufigste Fehlergruppen</h2><a href="#" data-goto="groups">alle →</a></div>
+        <div id="topGroups"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-groups" class="tab">
+    <div class="toolbar">
+      <input id="groupFilter" type="search" placeholder="Gruppen filtern (Text, Exception, Code, Subsystem)…">
+      <label><input type="checkbox" id="groupWarnOnly" checked> nur ≥ WARN</label>
+      <span class="chips" id="groupFlagChips"></span>
+      <span id="groupCount" class="muted"></span>
+    </div>
+    <div class="card flush"><table class="tbl" id="groupTable"></table></div>
+  </section>
+
+  <section id="tab-anomalies" class="tab">
+    <div class="toolbar"><span class="chips" id="anomalyChips"></span></div>
+    <div id="anomalyList"></div>
+  </section>
+
+  <section id="tab-events" class="tab">
+    <div class="toolbar">
+      <span id="eventTotal" class="muted"></span>
+      <label>Reihenfolge <select id="eventOrder"><option value="desc">neueste zuerst</option><option value="asc">älteste zuerst</option></select></label>
+      <label><input type="checkbox" id="eventWrap"> Zeilen umbrechen</label>
+    </div>
+    <div id="eventList" class="events"></div>
+    <div class="more"><button id="eventMore" class="ghost" hidden>Weitere laden</button></div>
+  </section>
+
+  <section id="tab-files" class="tab">
+    <div class="card flush"><table class="tbl" id="fileTable"></table></div>
+  </section>
+</main>
+
+<aside id="drawer" class="drawer" hidden>
+  <div class="drawer-head"><h2 id="drawerTitle"></h2><button class="ghost" id="drawerClose">✕</button></div>
+  <div id="drawerBody" class="drawer-body"></div>
+</aside>
+
+<div id="help" class="modal" hidden>
+  <div class="modal-box">
+    <h2>Suchsyntax</h2>
+    <table class="tbl small">
+      <tr><td><code>timeout connection</code></td><td>beide Wörter (UND), Groß/Klein egal</td></tr>
+      <tr><td><code>"Read timed out"</code></td><td>Phrase</td></tr>
+      <tr><td><code>pool OR reaper</code>, <code>-heartbeat</code>, <code>(a OR b) c</code></td><td>boolesche Logik, Ausschluss</td></tr>
+      <tr><td><code>Customer*</code>, <code>*Exception</code></td><td>Wildcards</td></tr>
+      <tr><td><code>ex:NullPointerException</code></td><td>Exception in der Kette (einfacher oder voller Klassenname)</td></tr>
+      <tr><td><code>code:IJ000453</code>, <code>code:WFLYEJB*</code></td><td>Message-Code (WildFly/IronJacamar/Arjuna/Hibernate …)</td></tr>
+      <tr><td><code>logger:com.acme*</code>, <code>thread:"default task-12"</code></td><td>Logger / Thread (exakt oder Wildcard)</td></tr>
+      <tr><td><code>level:ERROR</code>, <code>level:>=WARN</code></td><td>Level</td></tr>
+      <tr><td><code>group:42</code>, <code>-group:7</code></td><td>Fehlergruppe ein-/ausschließen</td></tr>
+    </table>
+    <p class="muted">Alle Ansichten (Zeitverlauf, Gruppen, Fehlerarten) zeigen immer das aktuelle Suchergebnis.</p>
+    <button class="ghost" onclick="this.closest('.modal').hidden=true">Schließen</button>
+  </div>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

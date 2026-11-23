@@ -1,0 +1,5 @@
+target/
+dist/
+.bench/
+.logstar-index/
+*.log
