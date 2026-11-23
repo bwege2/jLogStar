@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>jlogstar</groupId>
   <artifactId>jlogstar</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <packaging>jar</packaging>
   <name>jLogStar</name>
   <description>Log analyzer for Java/WildFly logs: search, error grouping and anomaly detection</description>

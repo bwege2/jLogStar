@@ -859,7 +859,7 @@ $('#searchForm').addEventListener('submit', e => {
   state.minLevel = $('#minLevel').value;
   refresh();
 });
-$('#minLevel').addEventListener('change', () => { state.minLevel = $('#minLevel').value; refresh(); });
+$('#minLevel').addEventListener('change', () => { state.q = $('#q').value.trim(); state.minLevel = $('#minLevel').value; refresh(); });
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) showTab(b.dataset.tab); });
 $('#helpBtn').addEventListener('click', () => $('#help').hidden = false);
 $('#themeBtn').addEventListener('click', () => {

@@ -240,8 +240,10 @@ public final class SearchService {
             next = fd.fields[0] + ":" + fd.fields[1] + ":" + sd.doc;
         }
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("total", td.totalHits.value());
-        out.put("totalExact", td.totalHits.relation() == TotalHits.Relation.EQUAL_TO);
+        // the sorted top-n search only counts up to 1000 hits; an exact count is cheap with Lucene's count shortcuts
+        boolean exact = td.totalHits.relation() == TotalHits.Relation.EQUAL_TO;
+        out.put("total", exact ? td.totalHits.value() : ds.searcher.count(q));
+        out.put("totalExact", true);
         out.put("events", evs);
         out.put("cursor", evs.size() == limit ? next : null);
         out.put("tookMs", (System.nanoTime() - t0) / 1_000_000);

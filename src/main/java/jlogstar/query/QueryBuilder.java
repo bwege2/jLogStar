@@ -37,6 +37,7 @@ public final class QueryBuilder {
 
     private static final Pattern LEVEL_GE = Pattern.compile("level:>=?([A-Za-z]+)");
     private static final Pattern LEVEL_EQ = Pattern.compile("level:([A-Za-z]+)");
+    private static final Pattern CODE = Pattern.compile("code:(\\S+)");
 
     public Query build(Filter f) throws ParseException {
         BooleanQuery.Builder b = new BooleanQuery.Builder();
@@ -59,9 +60,14 @@ public final class QueryBuilder {
             while (m2.find()) m2.appendReplacement(sb, "level:" + Level.name(Math.max(0, Level.parse(m2.group(1)))));
             m2.appendTail(sb);
             q = sb.toString().trim();
+            // message codes are always upper case (WFLYEJB0034, IJ000453)
+            Matcher m3 = CODE.matcher(q);
+            sb = new StringBuilder();
+            while (m3.find()) m3.appendReplacement(sb, Matcher.quoteReplacement("code:" + m3.group(1).toUpperCase(java.util.Locale.ROOT)));
+            m3.appendTail(sb);
+            q = sb.toString();
             if (!q.isEmpty() && !q.equals("*")) {
-                Parser p = new Parser();
-                b.add(p.parse(q), BooleanClause.Occur.MUST);
+                b.add(withPositiveClause(parseLenient(q)), BooleanClause.Occur.MUST);
                 any = true;
             }
         }
@@ -88,6 +94,42 @@ public final class QueryBuilder {
             any = true;
         }
         return any ? b.build() : new MatchAllDocsQuery();
+    }
+
+    /**
+     * Parses Lucene syntax. Log searches often contain paths ("/shop/api/orders") that Lucene would read as a
+     * regular expression: if parsing fails, slashes are escaped and parsing is retried.
+     */
+    Query parseLenient(String q) throws ParseException {
+        return new Parser().parse(escapeSlashes(q));
+    }
+
+    private static final Pattern REGEX_TERM = Pattern.compile("[+-]?(\\w+:)?/.+/");
+
+    /** Escapes '/' except in whole terms of the form /regex/ (optionally with field: and +/- prefix). */
+    static String escapeSlashes(String q) {
+        if (q.indexOf('/') < 0) return q;
+        StringBuilder sb = new StringBuilder(q.length() + 8);
+        for (String part : q.split("(?<=\\s)|(?=\\s)")) {
+            if (part.isBlank() || REGEX_TERM.matcher(part).matches()) sb.append(part);
+            else sb.append(part.replace("\\/", "/").replace("/", "\\/"));
+        }
+        return sb.toString();
+    }
+
+    private static final Set<String> FIELDS = Set.of(Fields.TEXT, Fields.LOGGER, Fields.THREAD, Fields.CODE, Fields.EX, Fields.LEVEL,
+            "group", "g", "file");
+
+    /** "-heartbeat" alone would match nothing in Lucene: purely negative queries mean "everything except". */
+    static Query withPositiveClause(Query q) {
+        if (q instanceof BooleanQuery bq && !bq.clauses().isEmpty()
+                && bq.clauses().stream().allMatch(c -> c.occur() == BooleanClause.Occur.MUST_NOT)) {
+            BooleanQuery.Builder b = new BooleanQuery.Builder();
+            b.add(new MatchAllDocsQuery(), BooleanClause.Occur.MUST);
+            for (BooleanClause c : bq.clauses()) b.add(c);
+            return b.build();
+        }
+        return q;
     }
 
     public Query groupQuery(Collection<Integer> groups) {
@@ -125,11 +167,25 @@ public final class QueryBuilder {
                     throw new ParseException("file: erwartet eine Datei-Nummer");
                 }
             }
+            if (!FIELDS.contains(field)) {
+                // "SQLState: 23505" or "java:jboss/datasources/ShopDS" is text, not a field query
+                return super.getFieldQuery(Fields.TEXT, field + " " + queryText, true);
+            }
             if (Fields.LOGGER.equals(field) || Fields.THREAD.equals(field) || Fields.CODE.equals(field) || Fields.EX.equals(field)
                     || Fields.LEVEL.equals(field)) {
                 return new TermQuery(new Term(field, queryText));
             }
             return super.getFieldQuery(field, queryText, quoted);
+        }
+
+        @Override
+        protected Query getWildcardQuery(String field, String termStr) throws ParseException {
+            return FIELDS.contains(field) ? super.getWildcardQuery(field, termStr) : super.getWildcardQuery(Fields.TEXT, termStr);
+        }
+
+        @Override
+        protected Query getPrefixQuery(String field, String termStr) throws ParseException {
+            return FIELDS.contains(field) ? super.getPrefixQuery(field, termStr) : super.getPrefixQuery(Fields.TEXT, termStr);
         }
     }
 }

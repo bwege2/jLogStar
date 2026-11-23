@@ -30,13 +30,19 @@ public final class FormatDetector {
         for (Path p : inputs) {
             if (Files.isDirectory(p)) {
                 try (Stream<Path> s = Files.walk(p)) {
-                    for (Path f : s.filter(Files::isRegularFile).sorted().toList()) addFile(f, out);
+                    // skip hidden files and directories below the input (e.g. our own .jlogstar-index, .git)
+                    for (Path f : s.filter(Files::isRegularFile).filter(f -> !hiddenBelow(p, f)).sorted().toList()) addFile(f, out);
                 }
             } else if (Files.isRegularFile(p)) addFile(p, out);
             else throw new IOException("Not found: " + p);
         }
         for (int i = 0; i < out.size(); i++) out.get(i).id = i;
         return out;
+    }
+
+    private static boolean hiddenBelow(Path root, Path f) {
+        for (Path part : root.relativize(f)) if (part.toString().startsWith(".")) return true;
+        return false;
     }
 
     private static boolean ignorable(String name) {
